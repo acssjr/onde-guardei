@@ -2,7 +2,15 @@ package com.example.ondeguardei.data
 
 import kotlinx.coroutines.flow.Flow
 
-class ItemRepository(private val itemDao: ItemDao) {
+/**
+ * Repository central para acesso a dados
+ * Abstrai a fonte de dados (Room) das ViewModels
+ */
+class ItemRepository(
+    private val itemDao: ItemDao,
+    private val categoryDao: CategoryDao
+) {
+    // Items
     val allItems: Flow<List<Item>> = itemDao.getAllItems()
 
     fun getItemById(id: Int): Flow<Item?> = itemDao.getItemById(id)
@@ -21,5 +29,16 @@ class ItemRepository(private val itemDao: ItemDao) {
 
     suspend fun deleteById(id: Int) {
         itemDao.deleteById(id)
+    }
+
+    // Categories
+    val allCategories: Flow<List<Category>> = categoryDao.getAllCategories()
+
+    suspend fun getCategoryById(id: Long): Category? {
+        return categoryDao.getCategoryById(id)
+    }
+
+    suspend fun getItemCountByCategory(categoryId: Long): Int {
+        return categoryDao.getItemCountByCategory(categoryId)
     }
 }

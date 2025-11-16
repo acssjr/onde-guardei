@@ -3,222 +3,389 @@ package com.example.ondeguardei.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.ondeguardei.data.Category
 import com.example.ondeguardei.data.Item
-import java.io.File
+import com.example.ondeguardei.ui.theme.*
+import com.example.ondeguardei.viewmodel.ItemViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * TELA 3: DETALHES DO ITEM
+ *
+ * Layout:
+ * - Imagem grande no topo (40% da tela) com ícones de editar/deletar
+ * - Card com informações detalhadas
+ * - Botões de ação na parte inferior
+ */
 @Composable
 fun ItemDetailScreen(
-    item: Item,
-    onNavigateBack: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    itemId: Int,
+    viewModel: ItemViewModel,
+    onEditClick: (Item) -> Unit,
+    onBackClick: () -> Unit,
+    onDeleteSuccess: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val item by viewModel.getItemById(itemId).collectAsState(initial = null)
+    var category by remember { mutableStateOf<Category?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Detalhes do Item") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar")
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Excluir",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
+    // Carregar categoria
+    LaunchedEffect(item) {
+        item?.let {
+            category = viewModel.getCategoryById(it.categoriaId)
         }
-    ) { paddingValues ->
-        Column(
+    }
+
+    if (item == null) {
+        // Loading state
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .background(Background),
+            contentAlignment = Alignment.Center
         ) {
-            // Image
-            if (item.imagePath != null && File(item.imagePath).exists()) {
-                AsyncImage(
-                    model = File(item.imagePath),
-                    contentDescription = "Foto do item",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
+            CircularProgressIndicator(color = Primary)
+        }
+        return
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Background)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // === HEADER IMAGE (40% da tela) ===
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.4f)
+            ) {
+                // Imagem de fundo
+                if (item!!.imagePath != null) {
+                    AsyncImage(
+                        model = item!!.imagePath,
+                        contentDescription = "Foto de ${item!!.name}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Fallback gradient
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Primary, Primary.copy(alpha = 0.6f))
+                                )
+                            )
+                    )
+                }
+
+                // Gradient overlay bottom
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Background.copy(alpha = 0.7f),
+                                    Background
+                                ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY
+                            )
+                        )
+                )
+
+                // Back button
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .padding(top = 32.dp)
+                        .align(Alignment.TopStart)
+                        .background(Black80, CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.outline
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = Color.White
                     )
+                }
+
+                // Edit and Delete buttons
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .padding(top = 32.dp)
+                        .align(Alignment.TopEnd),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = { onEditClick(item!!) },
+                        modifier = Modifier.background(Black80, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = Color.White
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.background(Black80, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Deletar",
+                            tint = Error
+                        )
+                    }
                 }
             }
 
-            // Content
+            // === CONTENT ===
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
             ) {
-                // Name
-                Card(
+                // === INFO CARD ===
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                    shape = RoundedCornerShape(24.dp),
+                    color = Surface,
+                    tonalElevation = 2.dp
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(24.dp)
                     ) {
+                        // Nome
                         Text(
-                            text = "Item",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            text = item!!.name,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = item.name,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
 
-                // Location
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Local",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = item.location,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                // Description
-                if (item.description.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
+                        // Localização
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = "Localização",
+                                tint = Secondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = item!!.location,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Secondary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Categoria
+                        if (category != null) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(category!!.getColor().copy(alpha = 0.2f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = getCategoryIcon(category!!.icone),
+                                    contentDescription = category!!.nome,
+                                    tint = category!!.getColor(),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = category!!.nome,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        // Descrição
+                        if (item!!.description.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Divider(color = White50.copy(alpha = 0.1f))
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             Text(
                                 text = "Descrição",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = White70
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = item.description,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = item!!.description,
+                                fontSize = 16.sp,
+                                color = Color.White,
+                                lineHeight = 24.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider(color = White50.copy(alpha = 0.1f))
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Data de adição
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Adicionado em:",
+                                fontSize = 14.sp,
+                                color = White70
+                            )
+                            Text(
+                                text = formatDateFull(item!!.createdAt),
+                                fontSize = 14.sp,
+                                color = White50
                             )
                         }
                     }
                 }
 
-                // Date
-                Card(
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // === BOTÕES DE AÇÃO ===
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Cadastrado em",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    // Botão Editar
+                    OutlinedButton(
+                        onClick = { onEditClick(item!!) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Primary
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = formatDate(item.createdAt),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Editar Informações",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // Botão Compartilhar
+                    Button(
+                        onClick = { /* TODO: Compartilhar */ },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Secondary,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Compartilhar Localização",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 
+    // === DELETE DIALOG ===
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Excluir item") },
-            text = { Text("Deseja realmente excluir '${item.name}'? Esta ação não pode ser desfeita.") },
+            title = {
+                Text(text = "Deletar Item", color = Color.White)
+            },
+            text = {
+                Text(
+                    text = "Tem certeza que deseja deletar '${item!!.name}'? Esta ação não pode ser desfeita.",
+                    color = White70
+                )
+            },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
-                        onDelete()
+                        viewModel.delete(item!!)
                         showDeleteDialog = false
+                        onDeleteSuccess()
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Error
                     )
                 ) {
-                    Text("Excluir")
+                    Text("Deletar")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = White70)
                 }
-            }
+            },
+            containerColor = Surface
         )
     }
 }
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd 'de' MMMM 'de' yyyy 'às' HH:mm", Locale("pt", "BR"))
+/**
+ * Formata data completa com hora
+ */
+private fun formatDateFull(timestamp: Long): String {
+    val sdf = SimpleDateFormat("dd/MM/yyyy 'às' HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))
 }
