@@ -4,10 +4,12 @@ import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,8 +18,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.ondeguardei.data.Item
 import com.example.ondeguardei.ui.*
+import com.example.ondeguardei.ui.theme.Background
 import com.example.ondeguardei.ui.theme.OndeGuardeiTheme
 import com.example.ondeguardei.viewmodel.ItemViewModel
 
@@ -25,23 +27,22 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        // Permission result handled in composables
+        // Permissão concedida ou negada
+        // TODO: Mostrar feedback ao usuário se negada
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request camera permission
+        // Enable edge-to-edge (status bar transparente)
+        enableEdgeToEdge()
+
+        // Solicitar permissão de câmera
         requestPermissionLauncher.launch(Manifest.permission.CAMERA)
 
         setContent {
             OndeGuardeiTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    OndeGuardeiApp()
-                }
+                OndeGuardeiApp()
             }
         }
     }
@@ -52,112 +53,101 @@ fun OndeGuardeiApp() {
     val navController = rememberNavController()
     val viewModel: ItemViewModel = viewModel()
 
-    val items by viewModel.allItems.collectAsState(initial = emptyList())
-    var capturedImagePath by remember { mutableStateOf<String?>(null) }
-    var editingItem by remember { mutableStateOf<Item?>(null) }
-
-    NavHost(navController = navController, startDestination = "item_list") {
-        // Item list screen
-        composable("item_list") {
-            ItemListScreen(
-                items = items,
-                onItemClick = { item ->
-                    navController.navigate("item_detail/${item.id}")
-                },
-                onAddClick = {
-                    capturedImagePath = null
-                    editingItem = null
-                    navController.navigate("add_edit_item")
-                },
-                onDeleteItem = { item ->
-                    viewModel.delete(item)
-                }
-            )
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Background,
+        bottomBar = {
+            // Bottom Navigation
+            BottomNavigationBar(navController = navController)
         }
-
-        // Add/Edit item screen
-        composable("add_edit_item") {
-            val item = editingItem
-            AddEditItemScreen(
-                itemName = item?.name ?: "",
-                itemLocation = item?.location ?: "",
-                itemDescription = item?.description ?: "",
-                itemImagePath = capturedImagePath ?: item?.imagePath,
-                onNavigateBack = {
-                    capturedImagePath = null
-                    editingItem = null
-                    navController.popBackStack()
-                },
-                onSave = { name, location, description, imagePath ->
-                    if (item != null) {
-                        // Update existing item
-                        viewModel.update(
-                            item.copy(
-                                name = name,
-                                location = location,
-                                description = description,
-                                imagePath = imagePath
-                            )
-                        )
-                    } else {
-                        // Create new item
-                        viewModel.insert(
-                            Item(
-                                name = name,
-                                location = location,
-                                description = description,
-                                imagePath = imagePath
-                            )
-                        )
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.route,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(Background)
+        ) {
+            // === TELA 1: HOME ===
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    viewModel = viewModel,
+                    onItemClick = { itemId ->
+                        navController.navigate("item_detail/$itemId")
+                    },
+                    onSearchClick = {
+                        navController.navigate(Screen.Search.route)
                     }
-                    capturedImagePath = null
-                    editingItem = null
-                    navController.popBackStack()
-                },
-                onCameraClick = {
-                    navController.navigate("camera")
-                }
-            )
-        }
+                )
+            }
 
-        // Item detail screen
-        composable(
-            route = "item_detail/{itemId}",
-            arguments = listOf(navArgument("itemId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val itemId = backStackEntry.arguments?.getInt("itemId") ?: return@composable
-            val item by viewModel.getItemById(itemId).collectAsState(initial = null)
-
-            item?.let { currentItem ->
-                ItemDetailScreen(
-                    item = currentItem,
+            // === TELA 2: ADICIONAR ITEM ===
+            composable(Screen.Add.route) {
+                // TODO: Implementar tela de adicionar com câmera
+                // Por enquanto, vamos usar a tela antiga ou criar uma simples
+                CameraScreen(
                     onNavigateBack = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = false }
+                        }
+                    },
+                    onImageCaptured = { path ->
+                        // TODO: Navegar para formulário com imagem capturada
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = false }
+                        }
+                    }
+                )
+            }
+
+            // === TELA 5: CATEGORIAS ===
+            composable(Screen.Categories.route) {
+                CategoriesScreen(
+                    viewModel = viewModel,
+                    onCategoryClick = { category ->
+                        // TODO: Filtrar itens por categoria
+                        navController.navigate(Screen.Home.route)
+                    }
+                )
+            }
+
+            // === TELA 3: DETALHES DO ITEM ===
+            composable(
+                route = "item_detail/{itemId}",
+                arguments = listOf(navArgument("itemId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val itemId = backStackEntry.arguments?.getInt("itemId") ?: return@composable
+
+                ItemDetailScreen(
+                    itemId = itemId,
+                    viewModel = viewModel,
+                    onEditClick = { item ->
+                        // TODO: Navegar para tela de edição
                         navController.popBackStack()
                     },
-                    onEdit = {
-                        editingItem = currentItem
-                        capturedImagePath = null
-                        navController.navigate("add_edit_item")
+                    onBackClick = {
+                        navController.popBackStack()
                     },
-                    onDelete = {
-                        viewModel.delete(currentItem)
+                    onDeleteSuccess = {
                         navController.popBackStack()
                     }
                 )
             }
-        }
 
-        // Camera screen
-        composable("camera") {
-            CameraScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onImageCaptured = { path ->
-                    capturedImagePath = path
-                    navController.popBackStack()
-                }
-            )
+            // === TELA 4: BUSCA ===
+            composable(Screen.Search.route) {
+                SearchScreen(
+                    viewModel = viewModel,
+                    onItemClick = { itemId ->
+                        navController.navigate("item_detail/$itemId")
+                    },
+                    onBackClick = {
+                        viewModel.clearSearch()
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }
