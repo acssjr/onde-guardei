@@ -29,6 +29,7 @@ import com.example.ondeguardei.viewmodel.ItemViewModel
  * - LazyColumn com resultados (item list cards)
  * - Empty state se não houver resultados
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: ItemViewModel,
