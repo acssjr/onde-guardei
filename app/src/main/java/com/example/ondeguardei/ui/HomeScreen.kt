@@ -35,6 +35,7 @@ fun HomeScreen(
     viewModel: ItemViewModel,
     onItemClick: (Int) -> Unit,
     onSearchClick: () -> Unit,
+    onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val items by viewModel.allItems.collectAsState(initial = emptyList())
@@ -222,9 +223,18 @@ fun HomeScreen(
 
             // Espaço extra no final para evitar sobreposição com bottom nav
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(80.dp)) // Extra espaço para o FAB
             }
         }
+
+        // === FAB ===
+        AddItemFAB(
+            onClick = onAddClick,
+            expanded = true,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        )
     }
 }
 

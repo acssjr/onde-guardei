@@ -1,5 +1,6 @@
 package com.example.ondeguardei.ui
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +46,7 @@ fun ItemDetailScreen(
     onDeleteSuccess: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val item by viewModel.getItemById(itemId).collectAsState(initial = null)
     var category by remember { mutableStateOf<Category?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -316,7 +319,23 @@ fun ItemDetailScreen(
 
                     // Botão Compartilhar
                     Button(
-                        onClick = { /* TODO: Compartilhar */ },
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "📦 ${item!!.name}\n📍 Guardado em: ${item!!.location}\n\n" +
+                                            if (item!!.description.isNotBlank())
+                                                "💬 ${item!!.description}\n\n"
+                                            else "" +
+                                                    "Enviado do app Onde Guardei?"
+                                )
+                                putExtra(Intent.EXTRA_SUBJECT, "Localização de: ${item!!.name}")
+                            }
+                            context.startActivity(
+                                Intent.createChooser(shareIntent, "Compartilhar localização")
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),

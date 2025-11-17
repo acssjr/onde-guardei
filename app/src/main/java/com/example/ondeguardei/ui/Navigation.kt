@@ -1,11 +1,15 @@
 package com.example.ondeguardei.ui
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -179,17 +183,15 @@ fun AddItemFAB(
     ) {
         if (expanded) {
             // Extended FAB
-            androidx.compose.foundation.layout.Row(
+            Row(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Adicionar Item"
                 )
-                androidx.compose.foundation.layout.Spacer(
-                    modifier = Modifier.width(8.dp)
-                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "Adicionar Item")
             }
         } else {
